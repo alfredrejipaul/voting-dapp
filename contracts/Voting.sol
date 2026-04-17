@@ -3,60 +3,42 @@ pragma solidity ^0.8.24;
 
 /// @title Decentralised Voting Contract
 /// @author Alfred Reji
-/// @notice Allows users to vote for candidates on-chain with deadline and access control
+/// @notice On-chain voting with deadline enforcement and access control
 contract Voting {
 
-    // --- State Variables ---
-    /// @notice Address of the contract deployer
     address public owner;
-
-    /// @notice Whether voting is currently open
     bool public votingOpen;
-
-    /// @notice Unix timestamp when voting closes
     uint256 public votingDeadline;
-
-    /// @notice List of candidate names as bytes32
     bytes32[] public candidateList;
 
-    /// @notice Maps candidate name to vote count
     mapping(bytes32 => uint256) public votesReceived;
-
-    /// @notice Maps address to whether they have voted
     mapping(address => bool) public hasVoted;
-
-    /// @notice Maps candidate name to whether it is valid
     mapping(bytes32 => bool) private validCandidate;
 
-    // --- Events ---
-    /// @notice Emitted when a vote is cast
-    /// @param voter The address that voted
-    /// @param candidate The candidate voted for
+    error NotOwner();
+    error VotingNotOpen();
+    error DeadlinePassed();
+    error InvalidCandidate();
+    error AlreadyVoted();
+
     event VoteCast(address indexed voter, bytes32 indexed candidate);
-
-    /// @notice Emitted when voting begins
-    /// @param deadline The timestamp when voting closes
     event VotingStarted(uint256 indexed deadline);
-
-    /// @notice Emitted when voting is closed by owner
     event VotingClosed();
 
-    // --- Modifiers ---
     modifier onlyOwner() {
-        require(msg.sender == owner, "Only owner can call this");
+        if (msg.sender != owner) revert NotOwner();
         _;
     }
 
     modifier isVotingOpen() {
-        require(votingOpen, "Voting is not open");
-        require(block.timestamp < votingDeadline, "Voting deadline passed");
+        if (!votingOpen) revert VotingNotOpen();
+        if (block.timestamp >= votingDeadline) revert DeadlinePassed();
         _;
     }
 
-    // --- Constructor ---
     /// @notice Deploys the contract and initialises candidates
     /// @param candidates Array of candidate names as bytes32
-    /// @param durationMinutes How long voting stays open
+    /// @param durationMinutes How long voting stays open in minutes
     constructor(bytes32[] memory candidates, uint256 durationMinutes) {
         owner = msg.sender;
         votingOpen = true;
@@ -70,12 +52,11 @@ contract Voting {
         emit VotingStarted(votingDeadline);
     }
 
-    // --- Core Functions ---
     /// @notice Cast a vote for a candidate
     /// @param candidate The bytes32 name of the candidate
     function vote(bytes32 candidate) public isVotingOpen {
-        require(validCandidate[candidate], "Not a valid candidate");
-        require(!hasVoted[msg.sender], "You have already voted");
+        if (!validCandidate[candidate]) revert InvalidCandidate();
+        if (hasVoted[msg.sender]) revert AlreadyVoted();
 
         hasVoted[msg.sender] = true;
         ++votesReceived[candidate];
@@ -87,7 +68,7 @@ contract Voting {
     /// @param candidate The bytes32 name of the candidate
     /// @return The number of votes received
     function getVotes(bytes32 candidate) public view returns (uint256) {
-        require(validCandidate[candidate], "Not a valid candidate");
+        if (!validCandidate[candidate]) revert InvalidCandidate();
         return votesReceived[candidate];
     }
 
@@ -96,7 +77,7 @@ contract Voting {
         return candidateList;
     }
 
-    /// @notice Closes voting — only callable by owner
+    /// @notice Closes voting, only callable by owner
     function closeVoting() public onlyOwner {
         votingOpen = false;
         emit VotingClosed();
@@ -107,7 +88,7 @@ contract Voting {
     function getWinner() public view returns (bytes32 winner) {
         uint256 winningVoteCount = 0;
         for (uint256 i = 0; i < candidateList.length; ++i) {
-            if (votesReceived[candidateList[i]] > winningVoteCount) {
+            if (votesReceived[candidateList[i]] >= winningVoteCount + 1) {
                 winningVoteCount = votesReceived[candidateList[i]];
                 winner = candidateList[i];
             }
