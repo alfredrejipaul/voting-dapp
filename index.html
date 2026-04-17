@@ -1,629 +1,699 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VoteChain — Decentralised Voting</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700&display=swap" rel="stylesheet">
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg: #0a0a0f;
-      --surface: #111118;
-      --surface2: #18181f;
-      --border: rgba(255,255,255,0.07);
-      --border-hover: rgba(255,255,255,0.14);
-      --text: #f0f0f5;
-      --muted: #888899;
-      --accent: #7c6dfa;
-      --accent-dim: rgba(124,109,250,0.15);
-      --green: #22c98a;
-      --green-dim: rgba(34,201,138,0.12);
-      --amber: #f59e0b;
-      --red: #f87171;
-      --font-head: 'Syne', sans-serif;
-      --font-mono: 'DM Mono', monospace;
-    }
-
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--font-head);
-      min-height: 100vh;
-      padding: 0 0 60px;
-    }
-
-    /* Header */
-    .header {
-      border-bottom: 1px solid var(--border);
-      padding: 20px 32px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      position: sticky;
-      top: 0;
-      background: rgba(10,10,15,0.92);
-      backdrop-filter: blur(12px);
-      z-index: 100;
-    }
-
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 1.1rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-    }
-
-    .logo-icon {
-      width: 28px;
-      height: 28px;
-      background: var(--accent);
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-    }
-
-    .network-badge {
-      font-family: var(--font-mono);
-      font-size: 0.72rem;
-      padding: 4px 10px;
-      border-radius: 20px;
-      border: 1px solid var(--border);
-      color: var(--muted);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .network-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--green);
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
-    }
-
-    /* Main layout */
-    .main {
-      max-width: 860px;
-      margin: 0 auto;
-      padding: 40px 24px;
-    }
-
-    .hero {
-      margin-bottom: 40px;
-    }
-
-    .hero h1 {
-      font-size: clamp(2rem, 5vw, 3rem);
-      font-weight: 700;
-      letter-spacing: -0.04em;
-      line-height: 1.1;
-      margin-bottom: 10px;
-    }
-
-    .hero h1 span {
-      color: var(--accent);
-    }
-
-    .hero p {
-      color: var(--muted);
-      font-size: 0.95rem;
-      font-family: var(--font-mono);
-    }
-
-    /* Cards */
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 24px;
-      margin-bottom: 16px;
-      transition: border-color 0.2s;
-    }
-
-    .card:hover { border-color: var(--border-hover); }
-
-    .card-label {
-      font-family: var(--font-mono);
-      font-size: 0.7rem;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 16px;
-    }
-
-    /* Stats grid */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-
-    .stat {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 16px;
-    }
-
-    .stat-label {
-      font-family: var(--font-mono);
-      font-size: 0.68rem;
-      color: var(--muted);
-      margin-bottom: 8px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
-    .stat-value {
-      font-size: 0.95rem;
-      font-weight: 600;
-      color: var(--text);
-    }
-
-    .stat-value.open { color: var(--green); }
-    .stat-value.winner { color: var(--accent); }
-
-    /* Wallet */
-    .wallet-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .connect-btn {
-      background: var(--accent);
-      color: white;
-      border: none;
-      border-radius: 10px;
-      padding: 10px 20px;
-      font-family: var(--font-head);
-      font-size: 0.88rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: opacity 0.2s, transform 0.1s;
-    }
-
-    .connect-btn:hover { opacity: 0.85; }
-    .connect-btn:active { transform: scale(0.98); }
-    .connect-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
-    .wallet-address {
-      font-family: var(--font-mono);
-      font-size: 0.8rem;
-      color: var(--muted);
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      padding: 8px 14px;
-      border-radius: 8px;
-    }
-
-    /* Candidates */
-    .candidate-item {
-      padding: 18px 0;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .candidate-item:last-of-type { border-bottom: none; }
-
-    .candidate-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 10px;
-    }
-
-    .candidate-name {
-      font-size: 1rem;
-      font-weight: 600;
-      letter-spacing: -0.01em;
-    }
-
-    .candidate-right {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .vote-count {
-      font-family: var(--font-mono);
-      font-size: 0.8rem;
-      color: var(--muted);
-    }
-
-    .vote-btn {
-      background: transparent;
-      border: 1px solid var(--border-hover);
-      color: var(--text);
-      border-radius: 8px;
-      padding: 7px 16px;
-      font-family: var(--font-head);
-      font-size: 0.82rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .vote-btn:hover {
-      background: var(--accent-dim);
-      border-color: var(--accent);
-      color: var(--accent);
-    }
-
-    .vote-btn:disabled {
-      opacity: 0.3;
-      cursor: not-allowed;
-    }
-
-    /* Progress bar */
-    .progress-track {
-      height: 4px;
-      background: var(--surface2);
-      border-radius: 2px;
-      overflow: hidden;
-    }
-
-    .progress-fill {
-      height: 100%;
-      border-radius: 2px;
-      background: var(--accent);
-      transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
-    }
-
-    /* Status message */
-    .status-msg {
-      display: none;
-      font-family: var(--font-mono);
-      font-size: 0.78rem;
-      padding: 12px 16px;
-      border-radius: 10px;
-      margin-bottom: 16px;
-      line-height: 1.5;
-    }
-
-    .status-msg.pending {
-      display: block;
-      background: rgba(245,158,11,0.1);
-      border: 1px solid rgba(245,158,11,0.25);
-      color: var(--amber);
-    }
-
-    .status-msg.success {
-      display: block;
-      background: var(--green-dim);
-      border: 1px solid rgba(34,201,138,0.25);
-      color: var(--green);
-    }
-
-    .status-msg.error {
-      display: block;
-      background: rgba(248,113,113,0.1);
-      border: 1px solid rgba(248,113,113,0.25);
-      color: var(--red);
-    }
-
-    /* Already voted */
-    .voted-notice {
-      font-family: var(--font-mono);
-      font-size: 0.78rem;
-      color: var(--green);
-      background: var(--green-dim);
-      border: 1px solid rgba(34,201,138,0.2);
-      border-radius: 8px;
-      padding: 10px 14px;
-      margin-top: 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    /* Event log */
-    .event-entry {
-      font-family: var(--font-mono);
-      font-size: 0.75rem;
-      color: var(--muted);
-      padding: 10px 0;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      animation: fadeIn 0.4s ease;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-4px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .event-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--accent);
-      flex-shrink: 0;
-    }
-
-    .event-entry:last-child { border-bottom: none; }
-
-    .empty-log {
-      font-family: var(--font-mono);
-      font-size: 0.75rem;
-      color: var(--muted);
-      opacity: 0.5;
-    }
-
-    /* Placeholder */
-    .placeholder {
-      font-family: var(--font-mono);
-      font-size: 0.8rem;
-      color: var(--muted);
-      opacity: 0.6;
-    }
-
-    /* Two col layout */
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-    }
-
-    @media (max-width: 600px) {
-      .grid-2 { grid-template-columns: 1fr; }
-      .header { padding: 16px; }
-      .main { padding: 24px 16px; }
-    }
-  </style>
-</head>
-<body>
-
-<header class="header">
-  <div class="logo">
-    <div class="logo-icon">V</div>
-    VoteChain
-  </div>
-  <div class="network-badge">
-    <span class="network-dot" id="net-dot" style="background:#555"></span>
-    <span id="network-label">disconnected</span>
-  </div>
-</header>
-
-<main class="main">
-
-  <div class="hero">
-    <h1>Cast your vote.<br><span>On-chain.</span></h1>
-    <p>Immutable · Transparent · Trustless</p>
-  </div>
-
-  <!-- Wallet -->
-  <div class="card">
-    <div class="card-label">Wallet</div>
-    <div class="wallet-row">
-      <button class="connect-btn" id="connect-btn" onclick="connectWallet()">Connect MetaMask</button>
-      <span class="wallet-address" id="wallet-address">Not connected</span>
-    </div>
-  </div>
-
-  <!-- Stats -->
-  <div class="stats-grid">
-    <div class="stat">
-      <div class="stat-label">Status</div>
-      <div class="stat-value" id="voting-open">—</div>
-    </div>
-    <div class="stat">
-      <div class="stat-label">Deadline</div>
-      <div class="stat-value" id="deadline">—</div>
-    </div>
-    <div class="stat">
-      <div class="stat-label">Leading</div>
-      <div class="stat-value winner" id="winner">—</div>
-    </div>
-    <div class="stat">
-      <div class="stat-label">Network</div>
-      <div class="stat-value" id="network-name">—</div>
-    </div>
-  </div>
-
-  <!-- Candidates -->
-  <div class="card">
-    <div class="card-label">Candidates</div>
-    <div id="status-msg" class="status-msg"></div>
-    <div id="candidates-list">
-      <p class="placeholder">Connect your wallet to load candidates.</p>
-    </div>
-  </div>
-
-  <!-- Live feed -->
-  <div class="card">
-    <div class="card-label">Live vote feed</div>
-    <div id="event-log">
-      <p class="empty-log">Votes will appear here in real time.</p>
-    </div>
-  </div>
-
-</main>
-
-<script>
-  const CONTRACT_ADDRESS = "0x96CCf9ff606a10a716B2bD4fdD16C218b6476123";
-
-  const ABI = [
-    "function vote(bytes32 candidate) public",
-    "function getVotes(bytes32 candidate) public view returns (uint)",
-    "function getCandidates() public view returns (bytes32[])",
-    "function hasVoted(address) public view returns (bool)",
-    "function votingOpen() public view returns (bool)",
-    "function votingDeadline() public view returns (uint)",
-    "function getWinner() public view returns (bytes32)",
-    "event VoteCast(address indexed voter, bytes32 indexed candidate)"
-  ];
-
-  let provider, signer, contract, userAddress;
-
-  async function connectWallet() {
-    if (!window.ethereum) {
-      showStatus("MetaMask not detected. Please install it.", "error");
-      return;
-    }
-    try {
-      provider = new ethers.providers.Web3Provider(window.ethereum);
-      await provider.send("eth_requestAccounts", []);
-      signer = provider.getSigner();
-      userAddress = await signer.getAddress();
-
-      const network = await provider.getNetwork();
-
-      if (network.chainId !== 11155111) {
-        showStatus("Wrong network — please switch MetaMask to Sepolia.", "error");
-        return;
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VoteChain — Decentralised Voting</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
       }
 
-      document.getElementById("wallet-address").textContent =
-        `${userAddress.slice(0,6)}...${userAddress.slice(-4)}`;
-      document.getElementById("connect-btn").disabled = true;
-      document.getElementById("network-label").textContent = "sepolia";
-      document.getElementById("net-dot").style.background = "#22c98a";
-      document.getElementById("network-name").textContent = "Sepolia";
-
-      contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
-      await loadContractState();
-      listenForEvents();
-
-    } catch (err) {
-      showStatus("Connection failed: " + err.message, "error");
-    }
-  }
-
-  async function loadContractState() {
-    try {
-      const [candidates, isOpen, deadline, alreadyVoted] = await Promise.all([
-        contract.getCandidates(),
-        contract.votingOpen(),
-        contract.votingDeadline(),
-        contract.hasVoted(userAddress)
-      ]);
-
-      document.getElementById("deadline").textContent =
-        new Date(deadline.toNumber() * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-      document.getElementById("voting-open").textContent = isOpen ? "Open" : "Closed";
-      document.getElementById("voting-open").className = "stat-value" + (isOpen ? " open" : "");
-
-      try {
-        const w = await contract.getWinner();
-        const wName = ethers.utils.parseBytes32String(w);
-        document.getElementById("winner").textContent = wName || "—";
-      } catch {
-        document.getElementById("winner").textContent = "—";
+      :root {
+        --bg: #0a0a0f;
+        --surface: #111118;
+        --surface2: #18181f;
+        --border: rgba(255, 255, 255, 0.07);
+        --border-hover: rgba(255, 255, 255, 0.14);
+        --text: #f0f0f5;
+        --muted: #888899;
+        --accent: #7c6dfa;
+        --accent-dim: rgba(124, 109, 250, 0.15);
+        --green: #22c98a;
+        --green-dim: rgba(34, 201, 138, 0.12);
+        --amber: #f59e0b;
+        --red: #f87171;
+        --font-head: "Syne", sans-serif;
+        --font-mono: "DM Mono", monospace;
       }
 
-      await renderCandidates(candidates, alreadyVoted, isOpen);
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--font-head);
+        min-height: 100vh;
+        padding: 0 0 60px;
+      }
 
-    } catch (err) {
-      showStatus("Error loading data: " + err.message, "error");
-    }
-  }
+      /* Header */
+      .header {
+        border-bottom: 1px solid var(--border);
+        padding: 20px 32px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: sticky;
+        top: 0;
+        background: rgba(10, 10, 15, 0.92);
+        backdrop-filter: blur(12px);
+        z-index: 100;
+      }
 
-  async function renderCandidates(candidates, alreadyVoted, isOpen) {
-    const el = document.getElementById("candidates-list");
-    el.innerHTML = "";
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 1.1rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
 
-    const counts = await Promise.all(candidates.map(c => contract.getVotes(c)));
-    const total = counts.reduce((s, v) => s + v.toNumber(), 0);
+      .logo-icon {
+        width: 28px;
+        height: 28px;
+        background: var(--accent);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+      }
 
-    candidates.forEach((bytes, i) => {
-      const name = ethers.utils.parseBytes32String(bytes);
-      const votes = counts[i].toNumber();
-      const pct = total > 0 ? Math.round((votes / total) * 100) : 0;
+      .network-badge {
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        padding: 4px 10px;
+        border-radius: 20px;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
 
-      const item = document.createElement("div");
-      item.className = "candidate-item";
-      item.innerHTML = `
+      .network-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--green);
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.4;
+        }
+      }
+
+      /* Main layout */
+      .main {
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 40px 24px;
+      }
+
+      .hero {
+        margin-bottom: 40px;
+      }
+
+      .hero h1 {
+        font-size: clamp(2rem, 5vw, 3rem);
+        font-weight: 700;
+        letter-spacing: -0.04em;
+        line-height: 1.1;
+        margin-bottom: 10px;
+      }
+
+      .hero h1 span {
+        color: var(--accent);
+      }
+
+      .hero p {
+        color: var(--muted);
+        font-size: 0.95rem;
+        font-family: var(--font-mono);
+      }
+
+      /* Cards */
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 24px;
+        margin-bottom: 16px;
+        transition: border-color 0.2s;
+      }
+
+      .card:hover {
+        border-color: var(--border-hover);
+      }
+
+      .card-label {
+        font-family: var(--font-mono);
+        font-size: 0.7rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 16px;
+      }
+
+      /* Stats grid */
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .stat {
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+      }
+
+      .stat-label {
+        font-family: var(--font-mono);
+        font-size: 0.68rem;
+        color: var(--muted);
+        margin-bottom: 8px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .stat-value {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      .stat-value.open {
+        color: var(--green);
+      }
+      .stat-value.winner {
+        color: var(--accent);
+      }
+
+      /* Wallet */
+      .wallet-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .connect-btn {
+        background: var(--accent);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        padding: 10px 20px;
+        font-family: var(--font-head);
+        font-size: 0.88rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: opacity 0.2s, transform 0.1s;
+      }
+
+      .connect-btn:hover {
+        opacity: 0.85;
+      }
+      .connect-btn:active {
+        transform: scale(0.98);
+      }
+      .connect-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      .wallet-address {
+        font-family: var(--font-mono);
+        font-size: 0.8rem;
+        color: var(--muted);
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        padding: 8px 14px;
+        border-radius: 8px;
+      }
+
+      /* Candidates */
+      .candidate-item {
+        padding: 18px 0;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .candidate-item:last-of-type {
+        border-bottom: none;
+      }
+
+      .candidate-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+
+      .candidate-name {
+        font-size: 1rem;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+
+      .candidate-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .vote-count {
+        font-family: var(--font-mono);
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+
+      .vote-btn {
+        background: transparent;
+        border: 1px solid var(--border-hover);
+        color: var(--text);
+        border-radius: 8px;
+        padding: 7px 16px;
+        font-family: var(--font-head);
+        font-size: 0.82rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .vote-btn:hover {
+        background: var(--accent-dim);
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .vote-btn:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+      }
+
+      /* Progress bar */
+      .progress-track {
+        height: 4px;
+        background: var(--surface2);
+        border-radius: 2px;
+        overflow: hidden;
+      }
+
+      .progress-fill {
+        height: 100%;
+        border-radius: 2px;
+        background: var(--accent);
+        transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      /* Status message */
+      .status-msg {
+        display: none;
+        font-family: var(--font-mono);
+        font-size: 0.78rem;
+        padding: 12px 16px;
+        border-radius: 10px;
+        margin-bottom: 16px;
+        line-height: 1.5;
+      }
+
+      .status-msg.pending {
+        display: block;
+        background: rgba(245, 158, 11, 0.1);
+        border: 1px solid rgba(245, 158, 11, 0.25);
+        color: var(--amber);
+      }
+
+      .status-msg.success {
+        display: block;
+        background: var(--green-dim);
+        border: 1px solid rgba(34, 201, 138, 0.25);
+        color: var(--green);
+      }
+
+      .status-msg.error {
+        display: block;
+        background: rgba(248, 113, 113, 0.1);
+        border: 1px solid rgba(248, 113, 113, 0.25);
+        color: var(--red);
+      }
+
+      /* Already voted */
+      .voted-notice {
+        font-family: var(--font-mono);
+        font-size: 0.78rem;
+        color: var(--green);
+        background: var(--green-dim);
+        border: 1px solid rgba(34, 201, 138, 0.2);
+        border-radius: 8px;
+        padding: 10px 14px;
+        margin-top: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      /* Event log */
+      .event-entry {
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        color: var(--muted);
+        padding: 10px 0;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        animation: fadeIn 0.4s ease;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(-4px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .event-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--accent);
+        flex-shrink: 0;
+      }
+
+      .event-entry:last-child {
+        border-bottom: none;
+      }
+
+      .empty-log {
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        color: var(--muted);
+        opacity: 0.5;
+      }
+
+      /* Placeholder */
+      .placeholder {
+        font-family: var(--font-mono);
+        font-size: 0.8rem;
+        color: var(--muted);
+        opacity: 0.6;
+      }
+
+      /* Two col layout */
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+
+      @media (max-width: 600px) {
+        .grid-2 {
+          grid-template-columns: 1fr;
+        }
+        .header {
+          padding: 16px;
+        }
+        .main {
+          padding: 24px 16px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="header">
+      <div class="logo">
+        <div class="logo-icon">V</div>
+        VoteChain
+      </div>
+      <div class="network-badge">
+        <span class="network-dot" id="net-dot" style="background: #555"></span>
+        <span id="network-label">disconnected</span>
+      </div>
+    </header>
+
+    <main class="main">
+      <div class="hero">
+        <h1>Cast your vote.<br /><span>On-chain.</span></h1>
+        <p>Immutable · Transparent · Trustless</p>
+      </div>
+
+      <!-- Wallet -->
+      <div class="card">
+        <div class="card-label">Wallet</div>
+        <div class="wallet-row">
+          <button
+            class="connect-btn"
+            id="connect-btn"
+            onclick="connectWallet()"
+          >
+            Connect MetaMask
+          </button>
+          <span class="wallet-address" id="wallet-address">Not connected</span>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat">
+          <div class="stat-label">Status</div>
+          <div class="stat-value" id="voting-open">—</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Deadline</div>
+          <div class="stat-value" id="deadline">—</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Leading</div>
+          <div class="stat-value winner" id="winner">—</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Network</div>
+          <div class="stat-value" id="network-name">—</div>
+        </div>
+      </div>
+
+      <!-- Candidates -->
+      <div class="card">
+        <div class="card-label">Candidates</div>
+        <div id="status-msg" class="status-msg"></div>
+        <div id="candidates-list">
+          <p class="placeholder">Connect your wallet to load candidates.</p>
+        </div>
+      </div>
+
+      <!-- Live feed -->
+      <div class="card">
+        <div class="card-label">Live vote feed</div>
+        <div id="event-log">
+          <p class="empty-log">Votes will appear here in real time.</p>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      const CONTRACT_ADDRESS = "0x3468d2030a81a9B1b63155C31a991c098d5d70e1";
+
+      const ABI = [
+        "function vote(bytes32 candidate) public",
+        "function getVotes(bytes32 candidate) public view returns (uint)",
+        "function getCandidates() public view returns (bytes32[])",
+        "function hasVoted(address) public view returns (bool)",
+        "function votingOpen() public view returns (bool)",
+        "function votingDeadline() public view returns (uint)",
+        "function getWinner() public view returns (bytes32)",
+        "event VoteCast(address indexed voter, bytes32 indexed candidate)",
+      ];
+
+      let provider, signer, contract, userAddress;
+
+      async function connectWallet() {
+        if (!window.ethereum) {
+          showStatus("MetaMask not detected. Please install it.", "error");
+          return;
+        }
+        try {
+          provider = new ethers.providers.Web3Provider(window.ethereum);
+          await provider.send("eth_requestAccounts", []);
+          signer = provider.getSigner();
+          userAddress = await signer.getAddress();
+
+          const network = await provider.getNetwork();
+
+          if (network.chainId !== 11155111) {
+            showStatus(
+              "Wrong network — please switch MetaMask to Sepolia.",
+              "error"
+            );
+            return;
+          }
+
+          document.getElementById(
+            "wallet-address"
+          ).textContent = `${userAddress.slice(0, 6)}...${userAddress.slice(
+            -4
+          )}`;
+          document.getElementById("connect-btn").disabled = true;
+          document.getElementById("network-label").textContent = "sepolia";
+          document.getElementById("net-dot").style.background = "#22c98a";
+          document.getElementById("network-name").textContent = "Sepolia";
+
+          contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+          await loadContractState();
+          listenForEvents();
+        } catch (err) {
+          showStatus("Connection failed: " + err.message, "error");
+        }
+      }
+
+      async function loadContractState() {
+        try {
+          const [candidates, isOpen, deadline, alreadyVoted] =
+            await Promise.all([
+              contract.getCandidates(),
+              contract.votingOpen(),
+              contract.votingDeadline(),
+              contract.hasVoted(userAddress),
+            ]);
+
+          document.getElementById("deadline").textContent = new Date(
+            deadline.toNumber() * 1000
+          ).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+          document.getElementById("voting-open").textContent = isOpen
+            ? "Open"
+            : "Closed";
+          document.getElementById("voting-open").className =
+            "stat-value" + (isOpen ? " open" : "");
+
+          try {
+            const w = await contract.getWinner();
+            const wName = ethers.utils.parseBytes32String(w);
+            document.getElementById("winner").textContent = wName || "—";
+          } catch {
+            document.getElementById("winner").textContent = "—";
+          }
+
+          await renderCandidates(candidates, alreadyVoted, isOpen);
+        } catch (err) {
+          showStatus("Error loading data: " + err.message, "error");
+        }
+      }
+
+      async function renderCandidates(candidates, alreadyVoted, isOpen) {
+        const el = document.getElementById("candidates-list");
+        el.innerHTML = "";
+
+        const counts = await Promise.all(
+          candidates.map((c) => contract.getVotes(c))
+        );
+        const total = counts.reduce((s, v) => s + v.toNumber(), 0);
+
+        candidates.forEach((bytes, i) => {
+          const name = ethers.utils.parseBytes32String(bytes);
+          const votes = counts[i].toNumber();
+          const pct = total > 0 ? Math.round((votes / total) * 100) : 0;
+
+          const item = document.createElement("div");
+          item.className = "candidate-item";
+          item.innerHTML = `
         <div class="candidate-top">
           <span class="candidate-name">${name}</span>
           <div class="candidate-right">
-            <span class="vote-count">${votes} vote${votes !== 1 ? "s" : ""} &middot; ${pct}%</span>
-            ${(!alreadyVoted && isOpen)
-              ? `<button class="vote-btn" onclick="castVote('${name}', '${bytes}')">Vote</button>`
-              : ""}
+            <span class="vote-count">${votes} vote${
+            votes !== 1 ? "s" : ""
+          } &middot; ${pct}%</span>
+            ${
+              !alreadyVoted && isOpen
+                ? `<button class="vote-btn" onclick="castVote('${name}', '${bytes}')">Vote</button>`
+                : ""
+            }
           </div>
         </div>
         <div class="progress-track">
           <div class="progress-fill" id="bar-${name}" style="width:${pct}%"></div>
         </div>
       `;
-      el.appendChild(item);
-    });
+          el.appendChild(item);
+        });
 
-    if (alreadyVoted) {
-      const notice = document.createElement("div");
-      notice.className = "voted-notice";
-      notice.innerHTML = `<span>&#10003;</span> Your vote has been recorded on-chain.`;
-      el.appendChild(notice);
-    }
-  }
-
-  async function castVote(name, candidateBytes) {
-    try {
-      showStatus(`Submitting vote for ${name} — confirm in MetaMask...`, "pending");
-      disableVoteBtns();
-
-      const tx = await contract.vote(candidateBytes);
-      showStatus(`Confirming on Sepolia... tx ${tx.hash.slice(0,10)}...`, "pending");
-      await tx.wait();
-
-      showStatus(`Vote for ${name} confirmed on-chain.`, "success");
-      await loadContractState();
-
-    } catch (err) {
-      if (err.code === 4001) {
-        showStatus("Cancelled — you rejected the transaction.", "error");
-      } else if (err.message.includes("already voted")) {
-        showStatus("You have already voted.", "error");
-      } else {
-        showStatus(err.message, "error");
+        if (alreadyVoted) {
+          const notice = document.createElement("div");
+          notice.className = "voted-notice";
+          notice.innerHTML = `<span>&#10003;</span> Your vote has been recorded on-chain.`;
+          el.appendChild(notice);
+        }
       }
-      enableVoteBtns();
-    }
-  }
 
-  function listenForEvents() {
-    contract.on("VoteCast", (voter, candidateBytes) => {
-      const name = ethers.utils.parseBytes32String(candidateBytes);
-      const short = `${voter.slice(0,6)}...${voter.slice(-4)}`;
-      const log = document.getElementById("event-log");
-      if (log.querySelector(".empty-log")) log.innerHTML = "";
-      const entry = document.createElement("div");
-      entry.className = "event-entry";
-      entry.innerHTML = `<span class="event-dot"></span>${short} voted for ${name}`;
-      log.prepend(entry);
-    });
-  }
+      async function castVote(name, candidateBytes) {
+        try {
+          showStatus(
+            `Submitting vote for ${name} — confirm in MetaMask...`,
+            "pending"
+          );
+          disableVoteBtns();
 
-  function showStatus(msg, type) {
-    const el = document.getElementById("status-msg");
-    el.className = `status-msg ${type}`;
-    el.textContent = msg;
-  }
+          const tx = await contract.vote(candidateBytes);
+          showStatus(
+            `Confirming on Sepolia... tx ${tx.hash.slice(0, 10)}...`,
+            "pending"
+          );
+          await tx.wait();
 
-  function disableVoteBtns() {
-    document.querySelectorAll(".vote-btn").forEach(b => b.disabled = true);
-  }
+          showStatus(`Vote for ${name} confirmed on-chain.`, "success");
+          await loadContractState();
+        } catch (err) {
+          if (err.code === 4001) {
+            showStatus("Cancelled — you rejected the transaction.", "error");
+          } else if (err.message.includes("already voted")) {
+            showStatus("You have already voted.", "error");
+          } else {
+            showStatus(err.message, "error");
+          }
+          enableVoteBtns();
+        }
+      }
 
-  function enableVoteBtns() {
-    document.querySelectorAll(".vote-btn").forEach(b => b.disabled = false);
-  }
-</script>
-</body>
+      function listenForEvents() {
+        contract.on("VoteCast", (voter, candidateBytes) => {
+          const name = ethers.utils.parseBytes32String(candidateBytes);
+          const short = `${voter.slice(0, 6)}...${voter.slice(-4)}`;
+          const log = document.getElementById("event-log");
+          if (log.querySelector(".empty-log")) log.innerHTML = "";
+          const entry = document.createElement("div");
+          entry.className = "event-entry";
+          entry.innerHTML = `<span class="event-dot"></span>${short} voted for ${name}`;
+          log.prepend(entry);
+        });
+      }
+
+      function showStatus(msg, type) {
+        const el = document.getElementById("status-msg");
+        el.className = `status-msg ${type}`;
+        el.textContent = msg;
+      }
+
+      function disableVoteBtns() {
+        document
+          .querySelectorAll(".vote-btn")
+          .forEach((b) => (b.disabled = true));
+      }
+
+      function enableVoteBtns() {
+        document
+          .querySelectorAll(".vote-btn")
+          .forEach((b) => (b.disabled = false));
+      }
+    </script>
+  </body>
 </html>
