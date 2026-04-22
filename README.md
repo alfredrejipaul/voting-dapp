@@ -29,17 +29,19 @@ The project was built by evaluating the open-source repository `maheshmurthy/eth
 
 ## Project Structure
 
+```
 voting-dapp/
 ├── contracts/
-│ └── Voting.sol # Smart contract
+│   └── Voting.sol          # Smart contract
 ├── scripts/
-│ └── deploy.js # Deployment script for Sepolia
-├── index.html # Frontend application
-├── hardhat.config.js # Hardhat configuration
-├── .solhint.json # Solhint linting rules
-├── .env # Environment variables (not tracked)
-├── .gitignore # Git exclusions
+│   └── deploy.js           # Deployment script for Sepolia
+├── index.html              # Frontend application
+├── hardhat.config.js       # Hardhat configuration
+├── .solhint.json           # Solhint linting rules
+├── .env                    # Environment variables (not tracked)
+├── .gitignore              # Git exclusions
 └── README.md
+```
 
 ---
 
@@ -137,14 +139,6 @@ The application will open automatically at `http://127.0.0.1:8080`.
 4. Click **Vote** next to your chosen candidate
 5. Approve the transaction in the MetaMask popup
 6. Wait ~12 seconds for block confirmation
-
----
-
-## Verifying the Deployment
-
-The deployed contract can be inspected on Sepolia Etherscan:
-
-https://sepolia.etherscan.io/address/0x96CCf9ff606a10a716B2bD4fdD16C218b6476123
 
 ---
 
