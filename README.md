@@ -3,7 +3,6 @@
 **Module:** CN6035 Decentralised Applications — Task 1
 **Author:** Alfred Reji
 **Student ID:** 2653857
-**Deployed Contract:** `0x96CCf9ff606a10a716B2bD4fdD16C218b6476123` (Sepolia testnet)
 **Repository:** https://github.com/alfredrejipaul/voting-dapp
 
 ---
@@ -163,7 +162,7 @@ The final contract passes with **0 errors and 0 warnings**.
 
 ---
 
-## Development Notes for Tutors
+## Notes
 
 - All sensitive credentials (`PRIVATE_KEY`, `SEPOLIA_RPC_URL`) are stored in `.env` and excluded via `.gitignore`. The repository does not expose any keys.
 - The git commit history reflects incremental development: initial scaffolding → contract implementation → Solhint integration → iterative warning resolution → frontend development.
